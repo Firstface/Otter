@@ -27,4 +27,18 @@
         <item name="android:layout_marginStart">8dp</item>
     </style>
 
+    <!-- Green Card Row Styles -->
+    <style name="HomeCardRowContainer">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="HomeCardItem">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+    </style>
+
 </resources>

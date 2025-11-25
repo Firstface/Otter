@@ -1,26 +1,27 @@
-<resources>
-    <!-- Base application theme for light mode. -->
-    <style name="Base.Theme.Otter" parent="Theme.Material3.Light.NoActionBar">
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.Otter" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/neon_green</item>
-        <item name="colorPrimaryVariant">@color/neon_green</item>
+        <item name="colorPrimary">@color/accent_green</item>
         <item name="colorOnPrimary">@color/black</item>
+        <item name="colorPrimaryContainer">@color/light_green</item>
+        <item name="colorOnPrimaryContainer">@color/black</item>
 
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/neon_green</item>
-        <item name="colorSecondaryVariant">@color/neon_green</item>
+        <item name="colorSecondary">@color/light_green</item>
         <item name="colorOnSecondary">@color/black</item>
+        <item name="colorSecondaryContainer">@color/bg_panel</item>
+        <item name="colorOnSecondaryContainer">@color/white</item>
+
+        <!-- Background and surface colors. -->
+        <item name="android:colorBackground">@color/white</item>
+        <item name="colorOnBackground">@color/black</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/black</item>
 
         <!-- Status bar color. -->
-        <!-- 关键点 2: 设置状态栏背景为白色，与你的首页背景融合 -->
-        <item name="android:statusBarColor">@color/white</item>
-
-        <!-- 关键点 3: 设置状态栏图标为深色 (黑色) -->
-        <!-- 因为背景是白色，如果是白色图标就看不见了，所以必须设为 true -->
-        <item name="android:windowLightStatusBar">true</item>
-
-        <!-- Optional: 去掉窗口背景，防止过渡时闪烁 -->
-        <item name="android:windowBackground">@color/white</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
     </style>
 
     <style name="Theme.Otter" parent="Base.Theme.Otter" />
