@@ -1,19 +1,128 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/white">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- 第一行：导入 & 马上开拍 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <!-- 左侧：导入 (黑色背景) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/btn_import"
+            style="@style/HomeCardContainer"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_home_import">
+
+            <LinearLayout
+                style="@style/HomeCardContentLayout"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <ImageView
+                    style="@style/HomeCardIcon"
+                    android:src="@android:drawable/ic_input_add"
+                    android:background="@drawable/bg_circle_neon_green"
+                    app:tint="@color/black"
+                    android:padding="2dp"/>
+
+                <TextView
+                    style="@style/HomeCardText"
+                    android:text="导入"
+                    android:textColor="@color/white"/>
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- 右侧：马上开拍 (荧光绿背景) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/btn_camera"
+            style="@style/HomeCardContainer"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_home_camera">
+
+            <LinearLayout
+                style="@style/HomeCardContentLayout"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <ImageView
+                    style="@style/HomeCardIcon"
+                    android:src="@android:drawable/ic_menu_camera" />
+
+                <TextView
+                    style="@style/HomeCardText"
+                    android:text="相机"
+                    android:textColor="@color/black"/>
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
+
+    <!-- 第二行：三个浅绿色功能卡片 -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- 卡片1：修实况Live -->
+        <include
+            layout="@layout/item_home_card_green"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"/>
+
+        <!-- 卡片2：人像美化 -->
+        <include
+            layout="@layout/item_home_card_green"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="4dp"/>
+
+        <!-- 卡片3：拼图 -->
+        <include
+            layout="@layout/item_home_card_green"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
+    <!-- 第三行：功能网格区 (Grid) -->
+    <!-- 实际开发中建议用 RecyclerView + GridLayoutManager，这里为了演示布局结构用 GridLayout -->
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:columnCount="4"
+        android:rowCount="2"
+        android:useDefaultMargins="true">
+
+        <!-- 此处需要重复添加 item_grid_tool 布局，或者在代码中动态添加 -->
+        <!-- 示例：相机 -->
+        <include layout="@layout/item_grid_tool"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1" />
+
+        <!-- 示例：批量修图 -->
+        <include layout="@layout/item_grid_tool"
+            android:layout_width="0dp"
+            android:layout_columnWeight="1" />
+
+        <!-- ... 其它图标重复上述 include 即可 ... -->
+
+    </GridLayout>
+
+</LinearLayout>
