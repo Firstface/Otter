@@ -6,9 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.otter.R
+import com.example.otter.adapter.RecommendationAdapter
 import com.example.otter.adapter.ToolsAdapter
 import com.example.otter.databinding.FragmentHomeBinding
+import com.example.otter.model.RecommendationItem
 import com.example.otter.model.ToolItem
 
 class HomeFragment : Fragment() {
@@ -28,20 +31,15 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 设置三个绿色卡片的内容
         setupGreenCards()
-
-        // 设置 RecyclerView
-        setupRecyclerView()
+        setupToolsRecyclerView()
+        setupRecommendationRecyclerView()
     }
 
-    private fun setupRecyclerView() {
+    private fun setupToolsRecyclerView() {
         val rvTools = binding.rvTools
-
-        // 1. 设置布局管理器
         rvTools.layoutManager = GridLayoutManager(requireContext(), 4)
 
-        // 2. 准备数据 (使用占位符图标以避免编译错误)
         val toolList = listOf(
             ToolItem("相机", R.drawable.ic_linked_camera),
             ToolItem("批量修图", R.drawable.ic_batch_edit),
@@ -53,20 +51,38 @@ class HomeFragment : Fragment() {
             ToolItem("所有工具", R.drawable.ic_grid_all)
         )
 
-        // 3. 创建并设置适配器
         rvTools.adapter = ToolsAdapter(toolList)
     }
 
+
+    //TODO
+    //修改为远程提取
+    //优化
+
+    private fun setupRecommendationRecyclerView() {
+        val rvRecommendations = binding.rvRecommendations
+        rvRecommendations.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+
+        // 使用安卓内置的占位符图标，确保项目可以编译运行
+        val recommendationList = listOf(
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "海边风景"),
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "城市夜景"),
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "静谧森林"),
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "日落黄昏"),
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "雪山之巅"),
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "雪山之巅")
+        )
+
+        rvRecommendations.adapter = RecommendationAdapter(recommendationList)
+    }
+
     private fun setupGreenCards() {
-        // 卡片1：修实况Live
         binding.cardLivePhoto.ivCardIcon.setImageResource(R.drawable.ic_live)
         binding.cardLivePhoto.tvCardText.text = "修实况Live"
 
-        // 卡片2：人像美化
         binding.cardBeautify.ivCardIcon.setImageResource(R.drawable.ic_magic)
         binding.cardBeautify.tvCardText.text = "人像美化"
 
-        // 卡片3：拼图
         binding.cardCollage.ivCardIcon.setImageResource(R.drawable.ic_puzzle)
         binding.cardCollage.tvCardText.text = "拼图"
     }
