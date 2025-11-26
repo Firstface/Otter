@@ -1,5 +1,6 @@
 package com.example.otter.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -7,6 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.otter.PhotoSelectionActivity
 import com.example.otter.R
 import com.example.otter.adapter.RecommendationAdapter
 import com.example.otter.adapter.ToolsAdapter
@@ -31,9 +33,26 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupClickListeners()
         setupGreenCards()
         setupToolsRecyclerView()
         setupRecommendationRecyclerView()
+    }
+
+    private fun setupClickListeners() {
+        // Set click listeners for all function buttons
+        binding.btnImport.setOnClickListener { openPhotoSelection("导入") }
+        binding.btnCamera.setOnClickListener { openPhotoSelection("相机") }
+        binding.cardLivePhoto.root.setOnClickListener { openPhotoSelection("修实况Live") }
+        binding.cardBeautify.root.setOnClickListener { openPhotoSelection("人像美化") }
+        binding.cardCollage.root.setOnClickListener { openPhotoSelection("拼图") }
+    }
+
+    private fun openPhotoSelection(functionName: String) {
+        val intent = Intent(requireContext(), PhotoSelectionActivity::class.java).apply {
+            putExtra("SELECTED_FUNCTION_NAME", functionName)
+        }
+        startActivity(intent)
     }
 
     private fun setupToolsRecyclerView() {
@@ -52,25 +71,20 @@ class HomeFragment : Fragment() {
         )
 
         rvTools.adapter = ToolsAdapter(toolList)
+        // TODO: Add click listener to the adapter items as well
     }
-
-
-    //TODO
-    //修改为远程提取
-    //优化
 
     private fun setupRecommendationRecyclerView() {
         val rvRecommendations = binding.rvRecommendations
         rvRecommendations.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
-        // 使用安卓内置的占位符图标，确保项目可以编译运行
+        // Using placeholder drawables for now
         val recommendationList = listOf(
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "海边风景"),
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "城市夜景"),
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "静谧森林"),
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "日落黄昏"),
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "雪山之巅"),
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "雪山之巅")
+            RecommendationItem(android.R.drawable.ic_menu_report_image, "海边风景"),
+            RecommendationItem(android.R.drawable.ic_menu_camera, "城市夜景"),
+            RecommendationItem(android.R.drawable.ic_menu_gallery, "静谧森林"),
+            RecommendationItem(android.R.drawable.ic_menu_slideshow, "日落黄昏"),
+            RecommendationItem(android.R.drawable.ic_menu_mapmode, "雪山之巅")
         )
 
         rvRecommendations.adapter = RecommendationAdapter(recommendationList)
