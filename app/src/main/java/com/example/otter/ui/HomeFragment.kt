@@ -80,11 +80,11 @@ class HomeFragment : Fragment() {
 
         // Using placeholder drawables for now
         val recommendationList = listOf(
-            RecommendationItem(android.R.drawable.ic_menu_report_image, "海边风景"),
-            RecommendationItem(android.R.drawable.ic_menu_camera, "城市夜景"),
-            RecommendationItem(android.R.drawable.ic_menu_gallery, "静谧森林"),
-            RecommendationItem(android.R.drawable.ic_menu_slideshow, "日落黄昏"),
-            RecommendationItem(android.R.drawable.ic_menu_mapmode, "雪山之巅")
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907,"海边风景"),
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "城市夜景"),
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "静谧森林"),
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "日落黄昏"),
+            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "雪山之巅")
         )
 
         rvRecommendations.adapter = RecommendationAdapter(recommendationList)
