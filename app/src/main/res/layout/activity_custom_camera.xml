@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/black">
+    android:background="@android:color/black"
+    android:fitsSystemWindows="true">
 
     <!-- Camera Preview: Declared first to be in the background -->
     <androidx.camera.view.PreviewView
