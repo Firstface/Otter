@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.otter.CustomCameraActivity
 import com.example.otter.PhotoSelectionActivity
 import com.example.otter.R
 import com.example.otter.adapter.RecommendationAdapter
@@ -42,7 +43,10 @@ class HomeFragment : Fragment() {
     private fun setupClickListeners() {
         // Set click listeners for all function buttons
         binding.btnImport.setOnClickListener { openPhotoSelection("导入") }
-        binding.btnCamera.setOnClickListener { openPhotoSelection("相机") }
+        binding.btnCamera.setOnClickListener {
+            val intent = Intent(requireContext(), CustomCameraActivity::class.java)
+            startActivity(intent)
+        }
         binding.cardLivePhoto.root.setOnClickListener { openPhotoSelection("修实况Live") }
         binding.cardBeautify.root.setOnClickListener { openPhotoSelection("人像美化") }
         binding.cardCollage.root.setOnClickListener { openPhotoSelection("拼图") }
@@ -60,7 +64,7 @@ class HomeFragment : Fragment() {
         rvTools.layoutManager = GridLayoutManager(requireContext(), 4)
 
         val toolList = listOf(
-            ToolItem("相机", R.drawable.ic_linked_camera),
+            ToolItem("随机", R.drawable.ic_linked_camera),
             ToolItem("批量修图", R.drawable.ic_batch_edit),
             ToolItem("画质超清", R.drawable.ic_hd),
             ToolItem("魔法消除", R.drawable.ic_eraser),
@@ -70,10 +74,13 @@ class HomeFragment : Fragment() {
             ToolItem("所有工具", R.drawable.ic_grid_all)
         )
 
-        rvTools.adapter = ToolsAdapter(toolList)
-        // TODO: Add click listener to the adapter items as well
+        rvTools.adapter = ToolsAdapter(toolList){
+            openPhotoSelection(it.name)
+        }
     }
 
+
+    //临时使用
     private fun setupRecommendationRecyclerView() {
         val rvRecommendations = binding.rvRecommendations
         rvRecommendations.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)

@@ -179,6 +179,7 @@ class PhotoSelectionActivity : AppCompatActivity() {
         functions.clear()
 
         functions.addAll(listOf(
+            FunctionItem("随机"),
             FunctionItem("修图"),
             FunctionItem("视频剪辑"),
             FunctionItem("导入"),
