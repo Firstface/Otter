@@ -17,6 +17,7 @@
         <activity
             android:name=".PhotoSelectionActivity"
             android:exported="false" />
+        <activity android:name=".PhotoEditingActivity" />
         <activity android:name=".CustomCameraActivity" />
         <activity
             android:name=".MainActivity"

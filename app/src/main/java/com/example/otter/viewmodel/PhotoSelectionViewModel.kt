@@ -3,10 +3,12 @@ package com.example.otter.viewmodel
 import android.app.Application
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.content.Intent
 import android.os.Bundle
 import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.otter.PhotoEditingActivity
 import com.example.otter.model.AlbumItem
 import com.example.otter.model.FunctionItem
 import com.example.otter.model.FunctionType
@@ -21,6 +23,7 @@ import kotlinx.coroutines.launch
 sealed class PhotoSelectionEvent {
     data class ScrollFunctionList(val position: Int) : PhotoSelectionEvent()
     data class ScrollAlbumList(val position: Int) : PhotoSelectionEvent()
+    data class NavigateToPhotoEditing(val photoUri: String) : PhotoSelectionEvent()
 }
 
 class PhotoSelectionViewModel(application: Application) : AndroidViewModel(application) {
@@ -35,6 +38,12 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
 
     private val _photos = MutableStateFlow<List<PhotoItem>>(emptyList())
     val photos = _photos.asStateFlow()
+
+    private val _selectedPhotos = MutableStateFlow<List<PhotoItem>>(emptyList())
+    val selectedPhotos = _selectedPhotos.asStateFlow()
+
+    private val _isBatchEditMode = MutableStateFlow(false)
+    val isBatchEditMode = _isBatchEditMode.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -56,21 +65,64 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
         functionList.forEach { item ->
             if (item.type.displayName == selectedFunctionName) {
                 item.isSelected = true
+                if (item.type == FunctionType.BATCH_EDIT) {
+                    _isBatchEditMode.value = true
+                }
             }
         }
         _functions.value = functionList
-        // ** FIX: Removed event emission from here to prevent race condition **
     }
 
     fun onFunctionClick(position: Int) {
+        val clickedFunction = _functions.value[position].type
+        _isBatchEditMode.value = clickedFunction == FunctionType.BATCH_EDIT
+
+        if (!_isBatchEditMode.value) {
+            _selectedPhotos.value = emptyList()
+            val updatedPhotos = _photos.value.map { it.copy(isSelected = false) }
+            _photos.value = updatedPhotos
+        }
+
         val currentFunctions = _functions.value.mapIndexed { index, item ->
             item.copy(isSelected = index == position)
         }
         _functions.value = currentFunctions
         viewModelScope.launch {
-            // Event for subsequent clicks is still needed
             _event.emit(PhotoSelectionEvent.ScrollFunctionList(position))
         }
+    }
+
+    fun onPhotoClick(clickedPhoto: PhotoItem) {
+        if (_isBatchEditMode.value) {
+            val currentSelected = _selectedPhotos.value.toMutableList()
+            val existingPhoto = currentSelected.find { it.uri == clickedPhoto.uri }
+
+            if (existingPhoto != null) {
+                // Photo is already selected, so deselect it.
+                currentSelected.remove(existingPhoto)
+                updatePhotoSelectionState(clickedPhoto, false)
+            } else if (currentSelected.size < 9) {
+                // Photo is not selected and there's space, so select it.
+                currentSelected.add(clickedPhoto.copy(isSelected = true))
+                updatePhotoSelectionState(clickedPhoto, true)
+            }
+            _selectedPhotos.value = currentSelected
+        } else {
+            viewModelScope.launch {
+                _event.emit(PhotoSelectionEvent.NavigateToPhotoEditing(clickedPhoto.uri.toString()))
+            }
+        }
+    }
+
+    private fun updatePhotoSelectionState(photoItem: PhotoItem, isSelected: Boolean) {
+        val updatedPhotos = _photos.value.map {
+            if (it.uri == photoItem.uri) {
+                it.copy(isSelected = isSelected)
+            } else {
+                it
+            }
+        }
+        _photos.value = updatedPhotos
     }
 
     private fun loadAlbums() {
@@ -143,7 +195,8 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
                     val contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-                    photoList.add(PhotoItem(contentUri))
+                    val isSelected = _selectedPhotos.value.any { it.uri == contentUri } // Preserve selection state
+                    photoList.add(PhotoItem(contentUri, isSelected = isSelected))
                 }
             }
 

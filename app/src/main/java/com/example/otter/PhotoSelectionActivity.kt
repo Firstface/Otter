@@ -1,8 +1,10 @@
 package com.example.otter
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -15,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.otter.adapter.AlbumAdapter
 import com.example.otter.adapter.FunctionAdapter
 import com.example.otter.adapter.PhotoAdapter
+import com.example.otter.adapter.SelectedPhotoAdapter
 import com.example.otter.databinding.ActivityPhotoSelectionBinding
 import com.example.otter.viewmodel.PhotoSelectionEvent
 import com.example.otter.viewmodel.PhotoSelectionViewModel
@@ -26,8 +29,8 @@ class PhotoSelectionActivity : AppCompatActivity() {
     private val viewModel: PhotoSelectionViewModel by viewModels()
 
     private lateinit var photoAdapter: PhotoAdapter
+    private lateinit var selectedPhotoAdapter: SelectedPhotoAdapter
 
-    // ** FIX: Flag to prevent multiple initial scrolls **
     private var hasScrolledToInitialFunction = false
 
     companion object {
@@ -52,7 +55,9 @@ class PhotoSelectionActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerViews() {
-        photoAdapter = PhotoAdapter()
+        photoAdapter = PhotoAdapter { photo ->
+            viewModel.onPhotoClick(photo)
+        }
         binding.rvPhotos.adapter = photoAdapter
         binding.rvPhotos.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -62,6 +67,11 @@ class PhotoSelectionActivity : AppCompatActivity() {
                 }
             }
         })
+
+        selectedPhotoAdapter = SelectedPhotoAdapter { photo ->
+            viewModel.onPhotoClick(photo)
+        }
+        binding.rvSelectedPhotos.adapter = selectedPhotoAdapter
     }
 
     private fun observeViewModel() {
@@ -77,7 +87,6 @@ class PhotoSelectionActivity : AppCompatActivity() {
                             binding.rvFunctions.adapter = functionAdapter
                             binding.rvFunctions.layoutManager?.onRestoreInstanceState(scrollState)
 
-                            // ** FIX: Handle initial scroll here **
                             if (!hasScrolledToInitialFunction) {
                                 val selectedIndex = functions.indexOfFirst { it.isSelected }
                                 if (selectedIndex != -1) {
@@ -109,14 +118,32 @@ class PhotoSelectionActivity : AppCompatActivity() {
                 }
 
                 launch {
+                    viewModel.selectedPhotos.collect { photos ->
+                        selectedPhotoAdapter.submitList(photos)
+                        binding.tvSelectedCount.text = "已选择 ${photos.size}/9"
+                    }
+                }
+
+                launch {
+                    viewModel.isBatchEditMode.collect { isBatchEditMode ->
+                        binding.selectedPhotosContainer.visibility = if (isBatchEditMode) View.VISIBLE else View.GONE
+                    }
+                }
+
+                launch {
                     viewModel.event.collect { event ->
                         when (event) {
                             is PhotoSelectionEvent.ScrollFunctionList -> {
-                                // This now only handles subsequent clicks
                                 binding.rvFunctions.post { smoothScrollToCenter(binding.rvFunctions, event.position) }
                             }
                             is PhotoSelectionEvent.ScrollAlbumList -> {
                                 binding.rvAlbums.post { smoothScrollToCenter(binding.rvAlbums, event.position) }
+                            }
+                            is PhotoSelectionEvent.NavigateToPhotoEditing -> {
+                                val intent = Intent(this@PhotoSelectionActivity, PhotoEditingActivity::class.java).apply {
+                                    putExtra(PhotoEditingActivity.EXTRA_PHOTO_URI, event.photoUri)
+                                }
+                                startActivity(intent)
                             }
                         }
                     }
