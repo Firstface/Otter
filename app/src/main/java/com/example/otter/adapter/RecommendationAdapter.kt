@@ -38,8 +38,8 @@ class RecommendationAdapter(private val recommendationList: List<RecommendationI
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         // 绑定数据到视图
         val item = recommendationList[position]
-        holder.binding.ivRecommendationImage.setImageResource(item.imageResId)
-        holder.binding.tvRecommendationDescription.text = item.description
+        holder.binding.ivRecommendationImage.setImageResource(item.type.imageResId)
+        holder.binding.tvRecommendationDescription.text = item.type.description
     }
     /**
      * 返回推荐项数据列表的大小

@@ -24,8 +24,8 @@ class ToolsAdapter(
     // 绑定数据到ViewHolder，设置图标和工具名称
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val tool = toolList[position]
-        holder.binding.ivToolIcon.setImageResource(tool.iconResId) // 设置工具图标
-        holder.binding.tvToolName.text = tool.name                // 设置工具名称
+        holder.binding.ivToolIcon.setImageResource(tool.type.iconResId) // 设置工具图标
+        holder.binding.tvToolName.text = tool.type.displayName          // 设置工具名称
         holder.itemView.setOnClickListener {
             onItemClick(tool) // 触发回调，把当前点击的数据传出去
         }

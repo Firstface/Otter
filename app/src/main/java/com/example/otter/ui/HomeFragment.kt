@@ -6,6 +6,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.otter.CustomCameraActivity
@@ -14,13 +18,18 @@ import com.example.otter.R
 import com.example.otter.adapter.RecommendationAdapter
 import com.example.otter.adapter.ToolsAdapter
 import com.example.otter.databinding.FragmentHomeBinding
-import com.example.otter.model.RecommendationItem
-import com.example.otter.model.ToolItem
+import com.example.otter.model.FunctionType
+import com.example.otter.viewmodel.HomeNavigationEvent
+import com.example.otter.viewmodel.HomeViewModel
+import kotlinx.coroutines.launch
 
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
+    // 通过 ktx 扩展库，轻松获取 ViewModel 实例
+    private val viewModel: HomeViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -34,78 +43,100 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupUI()
+        observeViewModel()
+    }
+
+    /**
+     * 初始化所有静态UI配置
+     */
+    private fun setupUI() {
         setupClickListeners()
         setupGreenCards()
         setupToolsRecyclerView()
         setupRecommendationRecyclerView()
     }
 
-    private fun setupClickListeners() {
-        // Set click listeners for all function buttons
-        binding.btnImport.setOnClickListener { openPhotoSelection("导入") }
-        binding.btnCamera.setOnClickListener {
-            val intent = Intent(requireContext(), CustomCameraActivity::class.java)
-            startActivity(intent)
+    /**
+     * 监听 ViewModel 中的数据流和事件流
+     */
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            // repeatOnLifecycle 确保仅在视图处于活跃状态时收集数据
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                // 监听工具列表数据
+                launch {
+                    viewModel.toolList.collect { toolList ->
+                        binding.rvTools.adapter = ToolsAdapter(toolList) { tool ->
+                            viewModel.onToolClick(tool) // 将点击事件委托给 ViewModel
+                        }
+                    }
+                }
+
+                // 监听推荐列表数据
+                launch {
+                    viewModel.recommendationList.collect { recommendationList ->
+                        binding.rvRecommendations.adapter = RecommendationAdapter(recommendationList)
+                    }
+                }
+
+                // 监听一次性的导航事件
+                launch {
+                    viewModel.navigationEvent.collect { event ->
+                        when (event) {
+                            is HomeNavigationEvent.ToPhotoSelection -> openPhotoSelection(event.functionName)
+                            is HomeNavigationEvent.ToCamera -> openCamera()
+                        }
+                    }
+                }
+            }
         }
-        binding.cardLivePhoto.root.setOnClickListener { openPhotoSelection("修实况Live") }
-        binding.cardBeautify.root.setOnClickListener { openPhotoSelection("人像美化") }
-        binding.cardCollage.root.setOnClickListener { openPhotoSelection("拼图") }
+    }
+
+    /**
+     * 设置所有点击监听器，并将事件委托给 ViewModel
+     */
+    private fun setupClickListeners() {
+        binding.btnImport.setOnClickListener { viewModel.onImportClick() }
+        binding.btnCamera.setOnClickListener { viewModel.onCameraClick() }
+        binding.cardLivePhoto.root.setOnClickListener { viewModel.onLivePhotoCardClick() }
+        binding.cardBeautify.root.setOnClickListener { viewModel.onBeautifyCardClick() }
+        binding.cardCollage.root.setOnClickListener { viewModel.onCollageCardClick() }
     }
 
     private fun openPhotoSelection(functionName: String) {
         val intent = Intent(requireContext(), PhotoSelectionActivity::class.java).apply {
-            putExtra("SELECTED_FUNCTION_NAME", functionName)
+            putExtra(PhotoSelectionActivity.SELECTED_FUNCTION_NAME, functionName)
         }
         startActivity(intent)
     }
 
-    private fun setupToolsRecyclerView() {
-        val rvTools = binding.rvTools
-        rvTools.layoutManager = GridLayoutManager(requireContext(), 4)
-
-        val toolList = listOf(
-            ToolItem("随机", R.drawable.ic_linked_camera),
-            ToolItem("批量修图", R.drawable.ic_batch_edit),
-            ToolItem("画质超清", R.drawable.ic_hd),
-            ToolItem("魔法消除", R.drawable.ic_eraser),
-            ToolItem("智能抠图", R.drawable.ic_cutout),
-            ToolItem("一键出片", R.drawable.ic_film),
-            ToolItem("一键美化", R.drawable.ic_magic),
-            ToolItem("所有工具", R.drawable.ic_grid_all)
-        )
-
-        rvTools.adapter = ToolsAdapter(toolList){
-            openPhotoSelection(it.name)
-        }
+    private fun openCamera() {
+        val intent = Intent(requireContext(), CustomCameraActivity::class.java)
+        startActivity(intent)
     }
 
+    private fun setupToolsRecyclerView() {
+        binding.rvTools.layoutManager = GridLayoutManager(requireContext(), 4)
+        // Adapter 将在 observeViewModel 中设置
+    }
 
-    //临时使用
     private fun setupRecommendationRecyclerView() {
-        val rvRecommendations = binding.rvRecommendations
-        rvRecommendations.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-
-        // Using placeholder drawables for now
-        val recommendationList = listOf(
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907,"海边风景"),
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "城市夜景"),
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "静谧森林"),
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "日落黄昏"),
-            RecommendationItem(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "雪山之巅")
-        )
-
-        rvRecommendations.adapter = RecommendationAdapter(recommendationList)
+        binding.rvRecommendations.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        // Adapter 将在 observeViewModel 中设置
     }
 
     private fun setupGreenCards() {
+        // 使用枚举来设置静态文本，消除了魔术字符串
         binding.cardLivePhoto.ivCardIcon.setImageResource(R.drawable.ic_live)
-        binding.cardLivePhoto.tvCardText.text = "修实况Live"
+        binding.cardLivePhoto.tvCardText.text = FunctionType.LIVE_PHOTO_EDIT.displayName
 
         binding.cardBeautify.ivCardIcon.setImageResource(R.drawable.ic_magic)
-        binding.cardBeautify.tvCardText.text = "人像美化"
+        binding.cardBeautify.tvCardText.text = FunctionType.PORTRAIT_BEAUTY.displayName
 
         binding.cardCollage.ivCardIcon.setImageResource(R.drawable.ic_puzzle)
-        binding.cardCollage.tvCardText.text = "拼图"
+        binding.cardCollage.tvCardText.text = FunctionType.COLLAGE.displayName
     }
 
     override fun onDestroyView() {

@@ -51,7 +51,7 @@ class FunctionAdapter(
      */
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = functionList[position]
-        holder.binding.tvFunctionName.text = item.name
+        holder.binding.tvFunctionName.text = item.type.displayName
         holder.itemView.isSelected = item.isSelected
 
         holder.itemView.setOnClickListener {

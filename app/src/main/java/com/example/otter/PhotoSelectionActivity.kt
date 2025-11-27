@@ -18,6 +18,7 @@ import com.example.otter.adapter.PhotoAdapter
 import com.example.otter.databinding.ActivityPhotoSelectionBinding
 import com.example.otter.model.AlbumItem
 import com.example.otter.model.FunctionItem
+import com.example.otter.model.FunctionType
 import com.example.otter.model.PhotoItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -56,6 +57,7 @@ class PhotoSelectionActivity : AppCompatActivity() {
     companion object {
         // 权限请求码
         private const val PERMISSION_REQUEST_CODE = 100
+        const val SELECTED_FUNCTION_NAME = "SELECTED_FUNCTION_NAME"
     }
 
     /**
@@ -175,29 +177,15 @@ class PhotoSelectionActivity : AppCompatActivity() {
      * 3. 设置单选效果 + 自动居中
      */
     private fun setupFunctionRecyclerView() {
-        val selectedFunctionName = intent.getStringExtra("SELECTED_FUNCTION_NAME")
+        val selectedFunctionName = intent.getStringExtra(SELECTED_FUNCTION_NAME)
         functions.clear()
 
-        functions.addAll(listOf(
-            FunctionItem("随机"),
-            FunctionItem("修图"),
-            FunctionItem("视频剪辑"),
-            FunctionItem("导入"),
-            FunctionItem("修实况Live"),
-            FunctionItem("人像美化"),
-            FunctionItem("拼图"),
-            FunctionItem("批量修图"),
-            FunctionItem("画质超清"),
-            FunctionItem("魔法消除"),
-            FunctionItem("智能抠图"),
-            FunctionItem("一键出片"),
-            FunctionItem("一键美化"),
-        ))
+        functions.addAll(FunctionType.values().map { FunctionItem(it) })
 
         // 查找预选位置
         var selectedIndex = -1
         functions.forEachIndexed { index, item ->
-            if (item.name == selectedFunctionName) {
+            if (item.type.displayName == selectedFunctionName) {
                 item.isSelected = true
                 selectedIndex = index
             }
@@ -205,12 +193,7 @@ class PhotoSelectionActivity : AppCompatActivity() {
 
         functionAdapter = FunctionAdapter(functions) { position ->
             // 点击事件处理
-            functions.forEachIndexed { index, item ->
-                item.isSelected = index == position
-            }
-            functionAdapter.notifyDataSetChanged()
-
-            smoothScrollToCenter(binding.rvFunctions, position)
+            handleFunctionClick(position)
         }
         binding.rvFunctions.adapter = functionAdapter
 
@@ -221,6 +204,17 @@ class PhotoSelectionActivity : AppCompatActivity() {
                 smoothScrollToCenter(binding.rvFunctions, selectedIndex)
             }
         }
+    }
+
+    private fun handleFunctionClick(position: Int) {
+        functions.forEachIndexed { index, item ->
+            item.isSelected = index == position
+        }
+        functionAdapter.notifyDataSetChanged()
+
+        smoothScrollToCenter(binding.rvFunctions, position)
+
+        // 在这里可以根据 functions[position].type 处理具体的导航逻辑
     }
 
     /**
