@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 sealed class PhotoSelectionEvent {
@@ -46,19 +47,34 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
     private var currentPage = 0
     private var currentAlbum: String? = "全部"
 
-    fun initialize(selectedFunctionName: String?) {
-        setupFunctions(selectedFunctionName)
-        loadAlbums()
-        loadInitialPhotos()
-    }
-
-    private fun setupFunctions(selectedFunctionName: String?) {
-        val functionList = FunctionType.entries.map { FunctionItem(it) }
+    /**
+     * Initializes the function list, which does not require permissions.
+     * This should be called unconditionally when the screen is created.
+     */
+    fun initFunctions(selectedFunctionName: String?) {
+        val functionList = FunctionType.values().map { FunctionItem(it) }
         val selectedFunction = functionList.find { it.type.displayName == selectedFunctionName } ?: functionList.first()
 
         functionList.forEach { it.isSelected = it.type == selectedFunction.type }
         _isBatchEditMode.value = selectedFunction.type == FunctionType.BATCH_EDIT
         _functions.value = functionList
+    }
+
+    /**
+     * Loads media (albums and photos) from the MediaStore. Requires storage permissions.
+     */
+    fun loadMedia() {
+        loadAlbums()
+        loadInitialPhotos()
+    }
+
+    /**
+     * Clears all media data from the UI. Called when permissions are revoked.
+     */
+    fun clearMedia() {
+        _albums.value = emptyList()
+        _photos.value = emptyList()
+        _selectedPhotos.value = emptyList()
     }
 
     fun onFunctionClick(position: Int) {
@@ -165,7 +181,15 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
 
         viewModelScope.launch {
             val newPhotos = MediaLoader.loadPhotos(getApplication(), page, currentAlbum)
-            _photos.value = _photos.value + newPhotos
+            // Ensure selection state is restored when loading
+            val selectedUris = _selectedPhotos.value.map { it.uri }
+            val photosWithSelection = newPhotos.map { it.copy(isSelected = selectedUris.contains(it.uri)) }
+
+            if (page == 0) {
+                _photos.value = photosWithSelection
+            } else {
+                _photos.value = _photos.value + photosWithSelection
+            }
             _isLoading.value = false
         }
     }

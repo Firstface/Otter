@@ -1,5 +1,6 @@
 package com.example.otter
 
+import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -11,6 +12,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -33,6 +35,7 @@ class PhotoSelectionActivity : AppCompatActivity() {
 
     private lateinit var photoAdapter: PhotoAdapter
     private lateinit var selectedPhotoAdapter: SelectedPhotoAdapter
+    private lateinit var albumAdapter: AlbumAdapter
 
     private var hasScrolledToInitialFunction = false
 
@@ -51,12 +54,15 @@ class PhotoSelectionActivity : AppCompatActivity() {
         setupClickListeners()
         observeViewModel()
 
+        viewModel.initFunctions(intent.getStringExtra(SELECTED_FUNCTION_NAME))
         checkPermissionAndLoadData()
     }
 
     override fun onResume() {
         super.onResume()
-        // When user returns from settings, re-check permissions.
+        if (MediaLoader.hasPermission(this)) {
+            viewModel.loadMedia()
+        }
         checkManageButtonVisibility()
     }
 
@@ -82,6 +88,11 @@ class PhotoSelectionActivity : AppCompatActivity() {
             viewModel.onPhotoClick(photo)
         }
         binding.rvSelectedPhotos.adapter = selectedPhotoAdapter
+
+        albumAdapter = AlbumAdapter { position ->
+            viewModel.onAlbumClick(position)
+        }
+        binding.rvAlbums.adapter = albumAdapter
     }
 
     private fun setupClickListeners() {
@@ -89,8 +100,9 @@ class PhotoSelectionActivity : AppCompatActivity() {
             viewModel.onDoneClick()
         }
         binding.tvManageSelection.setOnClickListener {
-            // Re-trigger the permission request to show the photo selector again.
-            requestPermissions()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_IMAGES), PERMISSION_REQUEST_CODE)
+            }
         }
     }
 
@@ -120,14 +132,7 @@ class PhotoSelectionActivity : AppCompatActivity() {
 
                 launch {
                     viewModel.albums.collect { albums ->
-                        if (albums.isNotEmpty()) {
-                            val scrollState = binding.rvAlbums.layoutManager?.onSaveInstanceState()
-                            val albumAdapter = AlbumAdapter(albums) { position ->
-                                viewModel.onAlbumClick(position)
-                            }
-                            binding.rvAlbums.adapter = albumAdapter
-                            binding.rvAlbums.layoutManager?.onRestoreInstanceState(scrollState)
-                        }
+                        albumAdapter.submitList(albums)
                     }
                 }
 
@@ -174,57 +179,43 @@ class PhotoSelectionActivity : AppCompatActivity() {
     }
 
     private fun checkPermissionAndLoadData() {
-        if (!MediaLoader.hasPermission(this)) {
-            requestPermissions()
+        if (MediaLoader.hasPermission(this)) {
+            viewModel.loadMedia()
         } else {
-            viewModel.initialize(intent.getStringExtra(SELECTED_FUNCTION_NAME))
+            requestPermissions()
         }
         checkManageButtonVisibility()
     }
 
     private fun requestPermissions() {
-        ActivityCompat.requestPermissions(this, arrayOf(MediaLoader.getRequiredPermission()), PERMISSION_REQUEST_CODE)
+        // 直接调用 MediaLoader 的新方法，逻辑统一
+        val permissionsToRequest = MediaLoader.getRequiredPermissions()
+        ActivityCompat.requestPermissions(this, permissionsToRequest, PERMISSION_REQUEST_CODE)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, (re)load the data.
-                viewModel.initialize(intent.getStringExtra(SELECTED_FUNCTION_NAME))
+            // 直接使用工具类判断。
+            // 因为 MediaLoader.hasPermission 已经完美处理了“全权”和“部分权限”两种情况
+            if (MediaLoader.hasPermission(this)) {
+                viewModel.loadMedia()
             } else {
-                // Permission denied. Guide user to settings if needed.
-                if (!ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[0])) {
-                    showSettingsDialog()
-                }
+                // 只有真的什么都没选（拒绝）时，才清空
+                viewModel.clearMedia()
+                // 可选：在这里弹窗提示用户去设置里开启权限
             }
-            // After any permission result, check if we need to show the manage button.
             checkManageButtonVisibility()
         }
     }
 
     private fun checkManageButtonVisibility() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // Android 14+
-            val isPartialAccess = !MediaLoader.hasPermission(this)
+            val isPartialAccess = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
             binding.tvManageSelection.visibility = if (isPartialAccess) View.VISIBLE else View.GONE
+        } else {
+            binding.tvManageSelection.visibility = View.GONE
         }
-    }
-
-    private fun showSettingsDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("需要权限")
-            .setMessage("我们需要访问您的照片，以正常使用此功能。请在应用设置中开启存储权限。")
-            .setPositiveButton("前往设置") { dialog, _ ->
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                val uri = Uri.fromParts("package", packageName, null)
-                intent.data = uri
-                startActivity(intent)
-                dialog.dismiss()
-            }
-            .setNegativeButton("取消") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
     }
 
     private fun smoothScrollToCenter(recyclerView: RecyclerView, position: Int) {
