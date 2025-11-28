@@ -211,8 +211,8 @@ class PhotoSelectionActivity : AppCompatActivity() {
 
     private fun checkManageButtonVisibility() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // Android 14+
-            val isPartialAccess = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
-            binding.tvManageSelection.visibility = if (isPartialAccess) View.VISIBLE else View.GONE
+            val hasFullAccess = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+            binding.tvManageSelection.visibility = if (hasFullAccess) View.GONE else View.VISIBLE
         } else {
             binding.tvManageSelection.visibility = View.GONE
         }

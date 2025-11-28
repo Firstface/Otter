@@ -72,14 +72,11 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Main Canvas Image / 图片显示区域 -->
-    <ImageView
-        android:id="@+id/iv_main_image"
+    <android.opengl.GLSurfaceView
+        android:id="@+id/gl_surface_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_margin="16dp"
-        android:scaleType="fitCenter"
-        android:adjustViewBounds="true"
-        tools:src="@tools:sample/backgrounds/scenic"
         app:layout_constraintTop_toBottomOf="@id/layout_top_bar"
         app:layout_constraintBottom_toTopOf="@id/layout_control_panel"
         app:layout_constraintStart_toStartOf="parent"
@@ -130,7 +127,7 @@
             android:orientation="vertical"
             android:paddingVertical="16dp"
             android:visibility="visible"
-            app:layout_constraintBottom_toTopOf="@id/rv_bottom_tools">
+            app:layout_constraintBottom_toTopOf="@id/rv_editing_tools">
 
             <TextView
                 android:id="@+id/tv_param_name"
@@ -153,16 +150,15 @@
         </LinearLayout>
 
         <!-- Bottom Tools Menu / 底部工具菜单 (RecyclerView) -->
-        <!-- 注意：这里需要配合 Adapter 使用 item_tool_category.xml -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_bottom_tools"
+            android:id="@+id/rv_editing_tools"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             android:paddingHorizontal="8dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            tools:listitem="@layout/item_tool_category"/>
+            tools:listitem="@layout/item_editing_tool"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
