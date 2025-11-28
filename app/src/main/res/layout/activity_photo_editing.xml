@@ -108,6 +108,20 @@
         android:paddingBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- Thumbnail Preview for Batch Edit -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_editing_thumbnails"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            android:paddingVertical="8dp"
+            android:clipToPadding="false"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            app:layout_constraintBottom_toTopOf="@id/layout_slider_container"
+            tools:listitem="@layout/item_selected_photo"
+            tools:visibility="visible" />
+
         <!-- Parameter Slider / 参数调节滑块 (默认隐藏，选中工具时显示) -->
         <LinearLayout
             android:id="@+id/layout_slider_container"

@@ -1,14 +1,16 @@
 package com.example.otter
 
-import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -19,6 +21,7 @@ import com.example.otter.adapter.FunctionAdapter
 import com.example.otter.adapter.PhotoAdapter
 import com.example.otter.adapter.SelectedPhotoAdapter
 import com.example.otter.databinding.ActivityPhotoSelectionBinding
+import com.example.otter.util.MediaLoader
 import com.example.otter.viewmodel.PhotoSelectionEvent
 import com.example.otter.viewmodel.PhotoSelectionViewModel
 import kotlinx.coroutines.launch
@@ -45,9 +48,16 @@ class PhotoSelectionActivity : AppCompatActivity() {
 
         setupToolbar()
         setupRecyclerViews()
+        setupClickListeners()
         observeViewModel()
 
         checkPermissionAndLoadData()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // When user returns from settings, re-check permissions.
+        checkManageButtonVisibility()
     }
 
     private fun setupToolbar() {
@@ -72,6 +82,16 @@ class PhotoSelectionActivity : AppCompatActivity() {
             viewModel.onPhotoClick(photo)
         }
         binding.rvSelectedPhotos.adapter = selectedPhotoAdapter
+    }
+
+    private fun setupClickListeners() {
+        binding.btnDone.setOnClickListener {
+            viewModel.onDoneClick()
+        }
+        binding.tvManageSelection.setOnClickListener {
+            // Re-trigger the permission request to show the photo selector again.
+            requestPermissions()
+        }
     }
 
     private fun observeViewModel() {
@@ -141,7 +161,8 @@ class PhotoSelectionActivity : AppCompatActivity() {
                             }
                             is PhotoSelectionEvent.NavigateToPhotoEditing -> {
                                 val intent = Intent(this@PhotoSelectionActivity, PhotoEditingActivity::class.java).apply {
-                                    putExtra(PhotoEditingActivity.EXTRA_PHOTO_URI, event.photoUri)
+                                    putStringArrayListExtra(PhotoEditingActivity.EXTRA_PHOTO_URIS, event.photoUris)
+                                    putExtra(PhotoEditingActivity.EXTRA_FUNCTION_TYPE, event.functionType)
                                 }
                                 startActivity(intent)
                             }
@@ -153,18 +174,57 @@ class PhotoSelectionActivity : AppCompatActivity() {
     }
 
     private fun checkPermissionAndLoadData() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_MEDIA_IMAGES), PERMISSION_REQUEST_CODE)
+        if (!MediaLoader.hasPermission(this)) {
+            requestPermissions()
         } else {
             viewModel.initialize(intent.getStringExtra(SELECTED_FUNCTION_NAME))
         }
+        checkManageButtonVisibility()
+    }
+
+    private fun requestPermissions() {
+        ActivityCompat.requestPermissions(this, arrayOf(MediaLoader.getRequiredPermission()), PERMISSION_REQUEST_CODE)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            viewModel.initialize(intent.getStringExtra(SELECTED_FUNCTION_NAME))
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, (re)load the data.
+                viewModel.initialize(intent.getStringExtra(SELECTED_FUNCTION_NAME))
+            } else {
+                // Permission denied. Guide user to settings if needed.
+                if (!ActivityCompat.shouldShowRequestPermissionRationale(this, permissions[0])) {
+                    showSettingsDialog()
+                }
+            }
+            // After any permission result, check if we need to show the manage button.
+            checkManageButtonVisibility()
         }
+    }
+
+    private fun checkManageButtonVisibility() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // Android 14+
+            val isPartialAccess = !MediaLoader.hasPermission(this)
+            binding.tvManageSelection.visibility = if (isPartialAccess) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun showSettingsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("需要权限")
+            .setMessage("我们需要访问您的照片，以正常使用此功能。请在应用设置中开启存储权限。")
+            .setPositiveButton("前往设置") { dialog, _ ->
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                val uri = Uri.fromParts("package", packageName, null)
+                intent.data = uri
+                startActivity(intent)
+                dialog.dismiss()
+            }
+            .setNegativeButton("取消") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun smoothScrollToCenter(recyclerView: RecyclerView, position: Int) {

@@ -1,19 +1,13 @@
 package com.example.otter.viewmodel
 
 import android.app.Application
-import android.content.ContentResolver
-import android.content.ContentUris
-import android.content.Intent
-import android.os.Bundle
-import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.otter.PhotoEditingActivity
 import com.example.otter.model.AlbumItem
 import com.example.otter.model.FunctionItem
 import com.example.otter.model.FunctionType
 import com.example.otter.model.PhotoItem
-import kotlinx.coroutines.Dispatchers
+import com.example.otter.util.MediaLoader
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -23,12 +17,10 @@ import kotlinx.coroutines.launch
 sealed class PhotoSelectionEvent {
     data class ScrollFunctionList(val position: Int) : PhotoSelectionEvent()
     data class ScrollAlbumList(val position: Int) : PhotoSelectionEvent()
-    data class NavigateToPhotoEditing(val photoUri: String) : PhotoSelectionEvent()
+    data class NavigateToPhotoEditing(val photoUris: ArrayList<String>, val functionType: String) : PhotoSelectionEvent()
 }
 
 class PhotoSelectionViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val contentResolver: ContentResolver = application.contentResolver
 
     private val _functions = MutableStateFlow<List<FunctionItem>>(emptyList())
     val functions = _functions.asStateFlow()
@@ -51,8 +43,8 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
     private val _event = MutableSharedFlow<PhotoSelectionEvent>()
     val event = _event.asSharedFlow()
 
-    private var currentAlbum: String? = null
-    private val pageSize = 100
+    private var currentPage = 0
+    private var currentAlbum: String? = "全部"
 
     fun initialize(selectedFunctionName: String?) {
         setupFunctions(selectedFunctionName)
@@ -61,15 +53,11 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
     }
 
     private fun setupFunctions(selectedFunctionName: String?) {
-        val functionList = FunctionType.values().map { FunctionItem(it) }
-        functionList.forEach { item ->
-            if (item.type.displayName == selectedFunctionName) {
-                item.isSelected = true
-                if (item.type == FunctionType.BATCH_EDIT) {
-                    _isBatchEditMode.value = true
-                }
-            }
-        }
+        val functionList = FunctionType.entries.map { FunctionItem(it) }
+        val selectedFunction = functionList.find { it.type.displayName == selectedFunctionName } ?: functionList.first()
+
+        functionList.forEach { it.isSelected = it.type == selectedFunction.type }
+        _isBatchEditMode.value = selectedFunction.type == FunctionType.BATCH_EDIT
         _functions.value = functionList
     }
 
@@ -98,18 +86,27 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
             val existingPhoto = currentSelected.find { it.uri == clickedPhoto.uri }
 
             if (existingPhoto != null) {
-                // Photo is already selected, so deselect it.
                 currentSelected.remove(existingPhoto)
                 updatePhotoSelectionState(clickedPhoto, false)
             } else if (currentSelected.size < 9) {
-                // Photo is not selected and there's space, so select it.
                 currentSelected.add(clickedPhoto.copy(isSelected = true))
                 updatePhotoSelectionState(clickedPhoto, true)
             }
             _selectedPhotos.value = currentSelected
         } else {
             viewModelScope.launch {
-                _event.emit(PhotoSelectionEvent.NavigateToPhotoEditing(clickedPhoto.uri.toString()))
+                val functionType = _functions.value.first { it.isSelected }.type.name
+                _event.emit(PhotoSelectionEvent.NavigateToPhotoEditing(arrayListOf(clickedPhoto.uri.toString()), functionType))
+            }
+        }
+    }
+
+    fun onDoneClick() {
+        viewModelScope.launch {
+            val photoUris = ArrayList(_selectedPhotos.value.map { it.uri.toString() })
+            if (photoUris.isNotEmpty()) {
+                val functionType = _functions.value.first { it.isSelected }.type.name
+                _event.emit(PhotoSelectionEvent.NavigateToPhotoEditing(photoUris, functionType))
             }
         }
     }
@@ -126,26 +123,14 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
     }
 
     private fun loadAlbums() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val albumSet = mutableSetOf<String>()
-            val projection = arrayOf(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-
-            contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, null, null, null)?.use { cursor ->
-                val bucketColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
-                while (cursor.moveToNext()) {
-                    cursor.getString(bucketColumn)?.let { albumSet.add(it) }
-                }
-            }
-
-            val albumList = mutableListOf(AlbumItem("全部", true))
-            albumList.addAll(albumSet.map { AlbumItem(it) })
-            _albums.value = albumList
+        viewModelScope.launch {
+            _albums.value = MediaLoader.loadAlbums(getApplication())
         }
     }
 
     fun onAlbumClick(position: Int) {
         val selectedAlbumName = _albums.value.getOrNull(position)?.name ?: return
-        currentAlbum = if (selectedAlbumName == "全部") null else selectedAlbumName
+        currentAlbum = selectedAlbumName
 
         val updatedAlbums = _albums.value.mapIndexed { index, item ->
             item.copy(isSelected = index == position)
@@ -163,48 +148,24 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
     }
 
     private fun loadInitialPhotos() {
-        loadPhotos(0)
+        currentPage = 0
+        _photos.value = emptyList()
+        loadPhotos(currentPage)
     }
 
     private fun loadMorePhotos() {
         if (_isLoading.value) return
-        loadPhotos(_photos.value.size)
+        currentPage++
+        loadPhotos(currentPage)
     }
 
-    private fun loadPhotos(offset: Int) {
-        if (offset > 0 && _isLoading.value) return
+    private fun loadPhotos(page: Int) {
+        if (_isLoading.value) return
         _isLoading.value = true
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val photoList = mutableListOf<PhotoItem>()
-            val projection = arrayOf(MediaStore.Images.Media._ID)
-            val queryArgs = Bundle().apply {
-                putStringArray(ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(MediaStore.Images.Media.DATE_TAKEN))
-                putInt(ContentResolver.QUERY_ARG_SORT_DIRECTION, 1)
-                putInt(ContentResolver.QUERY_ARG_LIMIT, pageSize)
-                putInt(ContentResolver.QUERY_ARG_OFFSET, offset)
-
-                if (currentAlbum != null) {
-                    putString(ContentResolver.QUERY_ARG_SQL_SELECTION, "${MediaStore.Images.Media.BUCKET_DISPLAY_NAME} = ?")
-                    putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, arrayOf(currentAlbum))
-                }
-            }
-
-            contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, queryArgs, null)?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(idColumn)
-                    val contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-                    val isSelected = _selectedPhotos.value.any { it.uri == contentUri } // Preserve selection state
-                    photoList.add(PhotoItem(contentUri, isSelected = isSelected))
-                }
-            }
-
-            if (offset == 0) {
-                _photos.value = photoList
-            } else {
-                _photos.value = _photos.value + photoList
-            }
+        viewModelScope.launch {
+            val newPhotos = MediaLoader.loadPhotos(getApplication(), page, currentAlbum)
+            _photos.value = _photos.value + newPhotos
             _isLoading.value = false
         }
     }
