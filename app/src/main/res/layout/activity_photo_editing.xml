@@ -82,19 +82,27 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Comparison Button (Floating) / 对比按钮 -->
-    <ImageView
-        android:id="@+id/iv_compare"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:padding="6dp"
-        android:background="@drawable/bg_circle_dark"
-        android:src="@android:drawable/ic_menu_view"
-        app:tint="@color/white"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/layout_control_panel"/>
+    <com.example.otter.view.CropOverlayView
+        android:id="@+id/crop_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/gl_surface_view"
+        app:layout_constraintBottom_toBottomOf="@id/gl_surface_view"
+        app:layout_constraintStart_toStartOf="@id/gl_surface_view"
+        app:layout_constraintEnd_toEndOf="@id/gl_surface_view" />
+
+    <ImageButton
+        android:id="@+id/btn_confirm_crop"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="32dp"
+        android:background="@drawable/bg_circle_semi_transparent"
+        android:src="@drawable/ic_confirm_crop"
+        android:padding="12dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/crop_overlay"
+        app:layout_constraintBottom_toBottomOf="@id/crop_overlay" />
 
     <!-- Control Panel Area / 底部操作区域 -->
     <androidx.constraintlayout.widget.ConstraintLayout

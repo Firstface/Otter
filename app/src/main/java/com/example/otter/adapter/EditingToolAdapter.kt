@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.annotation.ColorInt
 import androidx.recyclerview.widget.RecyclerView
 import com.example.otter.R
 import com.example.otter.model.EditingToolType
@@ -33,8 +34,10 @@ class EditingToolAdapter(
 
         fun bind(tool: EditingToolType) {
             name.text = itemView.context.getString(tool.titleRes)
-            // You can set different icons based on the tool type here
-            // icon.setImageResource(tool.iconRes)
+        }
+
+        fun setTextColor(@ColorInt color: Int) {
+            name.setTextColor(color)
         }
     }
 }
