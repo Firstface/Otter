@@ -26,7 +26,7 @@ import com.example.otter.renderer.PhotoRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.FileOutputStream
+import java.util.Stack
 import kotlin.math.max
 
 class PhotoEditingActivity : AppCompatActivity() {
@@ -42,10 +42,14 @@ class PhotoEditingActivity : AppCompatActivity() {
 
     // 持有当前 Bitmap 用于计算尺寸和裁剪
     private var currentBitmap: Bitmap? = null
+    private var originalBitmap: Bitmap? = null
+    private val undoStack = Stack<Bitmap>()
+
 
     companion object {
         const val EXTRA_PHOTO_URIS = "EXTRA_PHOTO_URIS"
         const val EXTRA_FUNCTION_TYPE = "EXTRA_FUNCTION_TYPE"
+        private const val UNDO_STACK_CAPACITY = 5
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,19 +77,51 @@ class PhotoEditingActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        currentBitmap?.recycle()
+        originalBitmap?.recycle()
+        recycleUndoStack()
+    }
+
+    private fun recycleUndoStack() {
+        while (undoStack.isNotEmpty()) {
+            undoStack.pop().recycle()
+        }
+    }
+
+    private fun saveToHistory() {
+        currentBitmap?.let {
+            if (undoStack.size >= UNDO_STACK_CAPACITY) {
+                val oldestBitmap = undoStack.removeAt(0)
+                oldestBitmap.recycle()
+            }
+            undoStack.push(it.copy(it.config ?: Bitmap.Config.ARGB_8888, true))
+        }
+    }
+
     private fun loadBitmap(uri: Uri) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                // Recycle previous bitmaps before loading new ones
+                currentBitmap?.recycle()
+                originalBitmap?.recycle()
+                recycleUndoStack()
+
                 val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     val source = ImageDecoder.createSource(contentResolver, uri)
                     ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
                         decoder.isMutableRequired = true
                     }
                 } else {
+                    @Suppress("DEPRECATION")
                     MediaStore.Images.Media.getBitmap(contentResolver, uri)
                 }
 
+                originalBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
                 currentBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+                bitmap.recycle() // The originally decoded bitmap is no longer needed
+
 
                 withContext(Dispatchers.Main) {
                     renderer.updateBitmap(currentBitmap!!)
@@ -117,6 +153,33 @@ class PhotoEditingActivity : AppCompatActivity() {
         binding.btnConfirmCrop.setOnClickListener {
             performCrop()
         }
+
+        // Swapped button logic as per user request.
+        // iv_redo (撤销) -> pop from stack.
+        binding.ivRedo.setOnClickListener {
+            if (undoStack.isNotEmpty()) {
+                currentBitmap = undoStack.pop()
+                renderer.updateBitmap(currentBitmap!!)
+                binding.glSurfaceView.requestRender()
+            }
+        }
+
+        // iv_undo (重置) -> reset to original.
+        binding.ivUndo.setOnClickListener {
+            originalBitmap?.let {
+                val newBitmap = it.copy(it.config ?: Bitmap.Config.ARGB_8888, true)
+                currentBitmap = newBitmap
+                recycleUndoStack() // All history is invalid now, recycle the bitmaps.
+                renderer.updateBitmap(currentBitmap!!)
+
+                // Reset view
+                renderer.scaleFactor = 1f
+                renderer.translationX = 0f
+                renderer.translationY = 0f
+
+                binding.glSurfaceView.requestRender()
+            }
+        }
     }
 
     /**
@@ -124,6 +187,7 @@ class PhotoEditingActivity : AppCompatActivity() {
      * 使用与 Renderer 完全一致的公式计算图片位置，保证“所见即所得”
      */
     private fun performCrop() {
+        saveToHistory()
         val bitmap = currentBitmap ?: return
 
         val viewWidth = binding.glSurfaceView.width.toFloat()
@@ -191,20 +255,55 @@ class PhotoEditingActivity : AppCompatActivity() {
 
     private fun saveAndFinish() {
         val bitmap = currentBitmap ?: return
+
+        // 提示用户正在保存
+        Toast.makeText(this, "正在保存...", Toast.LENGTH_SHORT).show()
+
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val file = java.io.File(externalCacheDir, "edited_${System.currentTimeMillis()}.jpg")
-                val out = FileOutputStream(file)
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
-                out.flush()
-                out.close()
+                val filename = "Otter_${System.currentTimeMillis()}.jpg"
 
+                // 1. 配置图片属性 (保存到系统相册)
+                val contentValues = android.content.ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                    // Android 10 (Q) 及以上，指定文件夹为 Pictures/Otter
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/Otter")
+                        put(MediaStore.MediaColumns.IS_PENDING, 1) // 标记为写入中
+                    }
+                }
+
+                // 2. 插入到系统图库数据库
+                val resolver = applicationContext.contentResolver
+                val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+                uri?.let { outputUri ->
+                    // 3. 写入 Bitmap 数据
+                    resolver.openOutputStream(outputUri)?.use { stream ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                    }
+
+                    // 4. Android 10+ 写入完成，解除 Pending 状态（让相册可见）
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        contentValues.clear()
+                        contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                        resolver.update(outputUri, contentValues, null, null)
+                    }
+                }
+
+                // 5. 成功后返回
                 withContext(Dispatchers.Main) {
+                    Toast.makeText(this@PhotoEditingActivity, "已保存到相册", Toast.LENGTH_SHORT).show()
                     setResult(RESULT_OK)
                     finish()
                 }
+
             } catch (e: Exception) {
                 e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@PhotoEditingActivity, "保存失败: ${e.message}", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }

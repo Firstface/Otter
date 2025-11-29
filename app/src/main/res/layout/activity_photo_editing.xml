@@ -38,7 +38,7 @@
             app:layout_constraintEnd_toEndOf="parent">
 
             <ImageView
-                android:id="@+id/iv_undo"
+                android:id="@+id/iv_redo"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_marginEnd="20dp"
@@ -46,7 +46,7 @@
                 app:tint="@color/icon_gray" />
 
             <ImageView
-                android:id="@+id/iv_redo"
+                android:id="@+id/iv_undo"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@android:drawable/ic_menu_rotate"
@@ -59,7 +59,7 @@
             android:id="@+id/tv_save"
             android:layout_width="wrap_content"
             android:layout_height="32dp"
-            android:text="保存"
+            android:text="@string/saving"
             android:textColor="@color/accent_green"
             android:textStyle="bold"
             android:gravity="center"
