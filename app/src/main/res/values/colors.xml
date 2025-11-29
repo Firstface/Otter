@@ -21,4 +21,6 @@
     <color name="neon_green">#FFCCFF00</color>
 
     <color name="light_green">#FFEBF9D5</color>
+
+    <color name="crop_mask_color">#80000000</color>
 </resources>

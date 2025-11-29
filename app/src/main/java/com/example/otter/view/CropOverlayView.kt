@@ -11,6 +11,8 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.ContextCompat
+import com.example.otter.R
 
 class CropOverlayView @JvmOverloads constructor(
     context: Context,
@@ -26,6 +28,7 @@ class CropOverlayView @JvmOverloads constructor(
     private var cropRect = RectF()
 
     private var isDrawing = false
+    private var isDrawingFinished = false // Flag to lock drawing after first drag
 
     /**
      * A callback to notify the listener that the user has started to draw a crop rectangle.
@@ -36,7 +39,7 @@ class CropOverlayView @JvmOverloads constructor(
         setLayerType(LAYER_TYPE_SOFTWARE, null)
 
         // Make the background mask brighter (50% transparent black)
-        backgroundPaint.color = Color.parseColor("#80000000")
+        backgroundPaint.color = ContextCompat.getColor(context, R.color.crop_mask_color)
 
         borderPaint.style = Paint.Style.STROKE
         borderPaint.color = Color.WHITE
@@ -59,6 +62,11 @@ class CropOverlayView @JvmOverloads constructor(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // If drawing is finished, don't handle touch events to allow underlying view (photo) to be panned/zoomed.
+        if (isDrawingFinished) {
+            return false
+        }
+
         val x = event.x.coerceIn(0f, width.toFloat())
         val y = event.y.coerceIn(0f, height.toFloat())
 
@@ -89,20 +97,37 @@ class CropOverlayView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP -> {
                 isDrawing = false
+                isDrawingFinished = true // Lock the crop rect
                 return true
             }
         }
         return false
     }
 
-    fun getCropRect(): RectF {
-        return if (cropRect.isEmpty) RectF() else cropRect
+
+    /**
+     * Calculates the valid intersection of the crop rectangle and the displayed image bounds.
+     *
+     * @param imageBounds The RectF representing the bounds of the image on the screen.
+     * @return A new RectF of the intersection, or null if there is no overlap.
+     */
+    fun getValidCropRect(imageBounds: RectF): RectF? {
+        val intersection = RectF(cropRect)
+        if (intersection.intersect(imageBounds)) {
+            return intersection
+        }
+        return null // No overlap
     }
 
+
+    /**
+     * Resets the crop overlay to its initial state, allowing the user to draw a new rectangle.
+     */
     fun reset() {
         if (!cropRect.isEmpty) {
             cropRect.setEmpty()
             invalidate()
         }
+        isDrawingFinished = false // Allow drawing again
     }
 }
