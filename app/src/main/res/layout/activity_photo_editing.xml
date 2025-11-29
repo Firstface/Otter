@@ -92,6 +92,16 @@
         app:layout_constraintStart_toStartOf="@id/gl_surface_view"
         app:layout_constraintEnd_toEndOf="@id/gl_surface_view" />
 
+    <com.example.otter.view.DrawingOverlayView
+        android:id="@+id/drawing_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/gl_surface_view"
+        app:layout_constraintBottom_toBottomOf="@id/gl_surface_view"
+        app:layout_constraintStart_toStartOf="@id/gl_surface_view"
+        app:layout_constraintEnd_toEndOf="@id/gl_surface_view" />
+
     <ImageButton
         android:id="@+id/btn_confirm_crop"
         android:layout_width="48dp"
@@ -103,6 +113,18 @@
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="@id/crop_overlay"
         app:layout_constraintBottom_toBottomOf="@id/crop_overlay" />
+
+    <ImageButton
+        android:id="@+id/btn_confirm_brush"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="32dp"
+        android:background="@drawable/bg_circle_semi_transparent"
+        android:src="@drawable/ic_confirm_crop" 
+        android:padding="12dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/drawing_overlay"
+        app:layout_constraintBottom_toBottomOf="@id/drawing_overlay" />
 
     <!-- Control Panel Area / 底部操作区域 -->
     <androidx.constraintlayout.widget.ConstraintLayout

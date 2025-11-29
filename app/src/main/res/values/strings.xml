@@ -4,4 +4,5 @@
     <string name="tool_pan">平移</string>
     <string name="tool_crop">裁剪</string>
     <string name="tool_brush">画笔</string>
+    <string name="saving">保存</string>
 </resources>
