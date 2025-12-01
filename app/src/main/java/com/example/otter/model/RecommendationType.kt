@@ -9,9 +9,9 @@ import com.example.otter.R
  * @param description The display text for the recommendation item.
  */
 enum class RecommendationType(@DrawableRes val imageResId: Int, val description: String) {
-    SEASIDE(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "海边风景"),
-    CITY_NIGHT(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "城市夜景"),
-    FOREST(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "静谧森林"),
-    SUNSET(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "日落黄昏"),
-    SNOWY_MOUNTAIN(R.mipmap.fbb0ed97094a94b331c72121bf5a907, "雪山之巅")
+    SEASIDE(R.mipmap.samplerecomendationpic, "海边风景"),
+    CITY_NIGHT(R.mipmap.samplerecomendationpic, "城市夜景"),
+    FOREST(R.mipmap.samplerecomendationpic, "静谧森林"),
+    SUNSET(R.mipmap.samplerecomendationpic, "日落黄昏"),
+    SNOWY_MOUNTAIN(R.mipmap.samplerecomendationpic, "雪山之巅")
 }
