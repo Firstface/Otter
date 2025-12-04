@@ -1,5 +1,9 @@
 package com.example.otter.model
 
+/**
+ * 功能类型枚举类，定义了应用中可用的功能类型
+ * @param displayName 功能类型的显示名称，用于在用户界面上展示
+ */
 enum class FunctionType(val displayName: String) {
     RANDOM("随机"),
     EDIT("修图"),

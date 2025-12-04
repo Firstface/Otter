@@ -4,9 +4,9 @@ import androidx.annotation.DrawableRes
 import com.example.otter.R
 
 /**
- * Represents the different tools available on the home screen.
- * @param displayName The name of the tool to be displayed.
- * @param iconResId The drawable resource ID for the tool's icon.
+ * 工具类型枚举类，定义了应用中可用的编辑工具类型
+ * @param displayName 工具类型的显示名称，用于在用户界面上展示
+ * @param iconResId 工具类型的图标资源ID，用于在用户界面上展示
  */
 enum class ToolType(val displayName: String, @DrawableRes val iconResId: Int) {
     RANDOM("随机", R.drawable.ic_linked_camera),

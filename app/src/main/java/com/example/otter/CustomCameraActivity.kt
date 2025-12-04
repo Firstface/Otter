@@ -25,6 +25,9 @@ import com.example.otter.viewmodel.CameraUIEvent
 import com.example.otter.viewmodel.CustomCameraViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * 自定义相机活动，用于拍照和视频录制
+ */
 class CustomCameraActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCustomCameraBinding
@@ -32,7 +35,9 @@ class CustomCameraActivity : AppCompatActivity() {
 
     // ImageCapture 实例与相机生命周期绑定，因此保留在 Activity 中
     private var imageCapture: ImageCapture? = null
-
+    /**
+     * 活动创建时调用，初始化视图和相机
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCustomCameraBinding.inflate(layoutInflater)
@@ -48,12 +53,17 @@ class CustomCameraActivity : AppCompatActivity() {
         observeViewModel()
     }
 
+    /**
+     * 设置点击事件监听器，包括拍照、切换摄像头、返回
+     */
     private fun setupClickListeners() {
         binding.btnCapture.setOnClickListener { viewModel.takePhoto(imageCapture) }
         binding.btnFlipCamera.setOnClickListener { viewModel.flipCamera() }
         binding.btnBack.setOnClickListener { finish() }
     }
-
+    /**
+     * 观察 ViewModel 中的状态变化，包括摄像头选择器和 UI 事件
+     */
     private fun observeViewModel() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -78,7 +88,10 @@ class CustomCameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun handlePhotoSaved(savedUri: Uri?) {
+        /**
+         * 处理照片保存事件，显示成功消息和缩略图
+         */
+        private fun handlePhotoSaved(savedUri: Uri?) {
         val msg = "Photo capture succeeded: $savedUri"
         Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
         Log.d(TAG, msg)
@@ -89,8 +102,10 @@ class CustomCameraActivity : AppCompatActivity() {
             .apply(RequestOptions.circleCropTransform())
             .into(binding.ivThumbnail)
     }
-
-    private fun startCamera(cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA) {
+        /**
+         * 启动相机，绑定预览和 ImageCapture 用例
+         */
+        private fun startCamera(cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
         cameraProviderFuture.addListener({
@@ -113,11 +128,15 @@ class CustomCameraActivity : AppCompatActivity() {
 
         }, ContextCompat.getMainExecutor(this))
     }
-
+        /**
+         * 检查是否已授予所有必要的权限
+         */
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
-
+        /**
+         * 处理权限请求结果，检查是否所有权限都已授予
+         */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -133,7 +152,9 @@ class CustomCameraActivity : AppCompatActivity() {
             }
         }
     }
-
+        /**
+         *  companion object 定义了一些常量，包括标签、请求码和必要的权限
+         */
     companion object {
         private const val TAG = "CameraXApp"
         private const val REQUEST_CODE_PERMISSIONS = 10

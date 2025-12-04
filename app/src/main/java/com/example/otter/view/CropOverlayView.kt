@@ -14,6 +14,9 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import com.example.otter.R
 
+/**
+ * 裁剪区域遮罩视图，用于展示用户拖动的裁剪区域
+ */
 class CropOverlayView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -28,17 +31,16 @@ class CropOverlayView @JvmOverloads constructor(
     private var cropRect = RectF()
 
     private var isDrawing = false
-    private var isDrawingFinished = false // Flag to lock drawing after first drag
+    private var isDrawingFinished = false
 
-    /**
-     * A callback to notify the listener that the user has started to draw a crop rectangle.
-     */
     var onDragStarted: (() -> Unit)? = null
 
+    /**
+     * 当视图被创建时，初始化画笔属性
+     */
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
 
-        // Make the background mask brighter (50% transparent black)
         backgroundPaint.color = ContextCompat.getColor(context, R.color.crop_mask_color)
 
         borderPaint.style = Paint.Style.STROKE
@@ -47,7 +49,9 @@ class CropOverlayView @JvmOverloads constructor(
 
         clearPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
     }
-
+    /**
+     * 当视图被绘制时，绘制裁剪区域遮罩
+     */
     @SuppressLint("DrawAllocation")
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -59,11 +63,12 @@ class CropOverlayView @JvmOverloads constructor(
             canvas.drawRect(cropRect, borderPaint)
         }
     }
-
+    /**
+     * 当视图被触摸时，处理用户拖动裁剪区域的操作
+     */
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // If drawing is finished, don't handle touch events to allow underlying view (photo) to be panned/zoomed.
-        if (isDrawingFinished) {
+       if (isDrawingFinished) {
             return false
         }
 
@@ -75,12 +80,10 @@ class CropOverlayView @JvmOverloads constructor(
                 startPoint = Pair(x, y)
                 cropRect.set(x, y, x, y)
                 isDrawing = true
-                // Don't invalidate here, wait for the first move
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 if (isDrawing) {
-                    // On the very first move, notify the listener to show the confirm button
                     if (cropRect.width() == 0f && cropRect.height() == 0f) {
                         onDragStarted?.invoke()
                     }
@@ -91,7 +94,7 @@ class CropOverlayView @JvmOverloads constructor(
                         startPoint.first.coerceAtLeast(x),
                         startPoint.second.coerceAtLeast(y)
                     )
-                    invalidate() // Update the rectangle as the user drags
+                    invalidate()
                 }
                 return true
             }
@@ -105,24 +108,23 @@ class CropOverlayView @JvmOverloads constructor(
     }
 
 
-    /**
-     * Calculates the valid intersection of the crop rectangle and the displayed image bounds.
-     *
-     * @param imageBounds The RectF representing the bounds of the image on the screen.
-     * @return A new RectF of the intersection, or null if there is no overlap.
-     */
+        /**
+         * 计算裁剪区域与图片显示区域的有效交集
+         *
+         * @param imageBounds 图片显示区域的 RectF
+         * @return 有效交集的 RectF，若无交集则返回 null
+         */
     fun getValidCropRect(imageBounds: RectF): RectF? {
         val intersection = RectF(cropRect)
         if (intersection.intersect(imageBounds)) {
             return intersection
         }
-        return null // No overlap
+        return null
     }
 
-
-    /**
-     * Resets the crop overlay to its initial state, allowing the user to draw a new rectangle.
-     */
+        /**
+         * 重置裁剪区域遮罩，允许用户绘制新的矩形
+         */
     fun reset() {
         if (!cropRect.isEmpty) {
             cropRect.setEmpty()

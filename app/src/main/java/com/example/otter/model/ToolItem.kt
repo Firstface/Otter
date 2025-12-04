@@ -1,8 +1,8 @@
 package com.example.otter.model
 
 /**
- * Represents a tool item in the editor.
- * @param type The type of the tool, containing its name and icon.
+ * 工具项数据类，用于表示编辑工具中的项
+ * @param type 工具项的类型（例如，"裁剪"、"滤镜"等）
  */
 data class ToolItem(
     val type: ToolType

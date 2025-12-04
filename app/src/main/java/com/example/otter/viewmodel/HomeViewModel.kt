@@ -13,7 +13,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// 使用密封类来定义从主屏幕出发的、明确的导航事件
+/**
+ * 主屏幕导航事件密封类，用于表示从主屏幕出发的、明确的导航事件
+ */
 sealed class HomeNavigationEvent {
     data class ToPhotoSelection(val functionName: String) : HomeNavigationEvent()
     object ToCamera : HomeNavigationEvent()
@@ -39,8 +41,8 @@ class HomeViewModel : ViewModel() {
     }
 
     private fun loadData() {
-        _toolList.value = ToolType.values().map { ToolItem(it) }
-        _recommendationList.value = RecommendationType.values().map { RecommendationItem(it) }
+        _toolList.value = ToolType.entries.map { ToolItem(it) }
+        _recommendationList.value = RecommendationType.entries.map { RecommendationItem(it) }
     }
 
     // --- 事件处理方法 ---

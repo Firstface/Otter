@@ -1,9 +1,9 @@
 package com.example.otter.model
 
 /**
- * Represents an album/category of photos.
- * @param name The name of the album (e.g., "All", "Camera", "Screenshots").
- * @param isSelected Whether this album is currently selected.
+ * 相册项数据类，用于表示相册/分类中的照片项
+ * @param name 相册名称（例如，"所有"、"相机"、"截图"等）
+ * @param isSelected 是否当前选中该相册（默认为false）
  */
 data class AlbumItem(
     val name: String,
