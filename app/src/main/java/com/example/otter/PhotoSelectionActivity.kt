@@ -1,15 +1,14 @@
 package com.example.otter
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -38,6 +37,16 @@ class PhotoSelectionActivity : AppCompatActivity() {
     private lateinit var albumAdapter: AlbumAdapter
 
     private var hasScrolledToInitialFunction = false
+
+    private val photoEditingResultLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            if (MediaLoader.hasPermission(this)) {
+                viewModel.loadMedia()
+            }
+        }
+    }
 
     companion object {
         private const val PERMISSION_REQUEST_CODE = 100
@@ -169,7 +178,7 @@ class PhotoSelectionActivity : AppCompatActivity() {
                                     putStringArrayListExtra(PhotoEditingActivity.EXTRA_PHOTO_URIS, event.photoUris)
                                     putExtra(PhotoEditingActivity.EXTRA_FUNCTION_TYPE, event.functionType)
                                 }
-                                startActivity(intent)
+                                photoEditingResultLauncher.launch(intent)
                             }
                         }
                     }
@@ -203,7 +212,6 @@ class PhotoSelectionActivity : AppCompatActivity() {
             } else {
                 // 只有真的什么都没选（拒绝）时，才清空
                 viewModel.clearMedia()
-                // 可选：在这里弹窗提示用户去设置里开启权限
             }
             checkManageButtonVisibility()
         }

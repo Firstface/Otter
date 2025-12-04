@@ -14,7 +14,6 @@ import javax.microedition.khronos.opengles.GL10
 
 class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
-    // 简单的顶点着色器
     private val vertexShaderCode =
         "uniform mat4 uMVPMatrix;" +
                 "attribute vec4 vPosition;" +
@@ -25,7 +24,6 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
                 "  vTexCoord = aTexCoord;" +
                 "}"
 
-    // 片段着色器
     private val fragmentShaderCode =
         "precision mediump float;" +
                 "uniform sampler2D sTexture;" +
@@ -38,37 +36,28 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
     private lateinit var texCoordBuffer: FloatBuffer
     private var program: Int = 0
     private var textureId: Int = 0
+    private var surfaceJustCreated = false
 
-    // 持有待加载的 Bitmap
     private var pendingBitmap: Bitmap? = null
-    // 当前渲染的 Bitmap (用于获取宽高)
     var currentBitmap: Bitmap? = null
         private set
 
-    // 视图宽高 (屏幕像素)
     private var viewWidth = 0f
     private var viewHeight = 0f
 
-    // Handles
     private var positionHandle: Int = 0
     private var texCoordHandle: Int = 0
     private var textureUniformHandle: Int = 0
     private var mvpMatrixHandle: Int = 0
 
-    // Matrices
     private val mvpMatrix = FloatArray(16)
     private val projectionMatrix = FloatArray(16)
     private val modelMatrix = FloatArray(16)
 
-    // --- 公开属性 (由 Activity 手势控制) ---
-    // 缩放倍数
     @Volatile var scaleFactor = 1.0f
-    // 平移距离 (单位：像素 Pixels)
     @Volatile var translationX = 0.0f
     @Volatile var translationY = 0.0f
 
-    // 定义一个单位正方形 (0,0) -> (1,1)
-    // 我们将在 ModelMatrix 中将其缩放到图片的实际像素大小
     private val squareCoords = floatArrayOf(
         0.0f, 0.0f,   // Top left
         0.0f, 1.0f,   // Bottom left
@@ -76,7 +65,6 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
         1.0f, 0.0f    // Top right
     )
 
-    // 纹理坐标 (Android Bitmap 左上角是 0,0)
     private val texCoords = floatArrayOf(
         0.0f, 0.0f,   // Top Left
         0.0f, 1.0f,   // Bottom Left
@@ -85,7 +73,7 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
     )
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f) // 黑色背景
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
         setupBuffers()
         setupShaders()
         setupTexture()
@@ -94,55 +82,51 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
         texCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
         textureUniformHandle = GLES20.glGetUniformLocation(program, "sTexture")
         mvpMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix")
+
+        surfaceJustCreated = true
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES20.glViewport(0, 0, width, height)
         viewWidth = width.toFloat()
         viewHeight = height.toFloat()
-
-        // 【关键】使用像素投影 (Pixel Projection)
-        // 左上角为 (0,0)，X向右，Y向下。完全匹配 Android 屏幕坐标系。
         Matrix.orthoM(projectionMatrix, 0, 0f, viewWidth, viewHeight, 0f, -1f, 1f)
     }
 
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
 
-        // 1. 加载新 Bitmap (如果 Activity 更新了图片)
-        pendingBitmap?.let {
-            loadTextureFromBitmap(it)
-            currentBitmap = it
+        val newBitmapToLoad = pendingBitmap
+        if (newBitmapToLoad != null) {
+            currentBitmap = newBitmapToLoad
+            loadTextureFromBitmap(newBitmapToLoad)
             pendingBitmap = null
+            surfaceJustCreated = false
+        } else if (surfaceJustCreated) {
+            currentBitmap?.let {
+                loadTextureFromBitmap(it)
+            }
+            surfaceJustCreated = false
         }
 
         val bitmap = currentBitmap ?: return
 
-        // 2. 计算 Fit Center 基础缩放 (让图片完整显示在屏幕内)
         val widthRatio = viewWidth / bitmap.width
         val heightRatio = viewHeight / bitmap.height
-        val baseScale = if (widthRatio < heightRatio) widthRatio else heightRatio
+        val baseScale = minOf(widthRatio, heightRatio)
 
-        // 3. 计算图片当前的真实显示尺寸 (基础缩放 * 手势缩放)
         val drawWidth = bitmap.width * baseScale * scaleFactor
         val drawHeight = bitmap.height * baseScale * scaleFactor
 
-        // 4. 计算绘制起始点 (Top-Left)
-        // 逻辑：屏幕中心 + 平移偏移 - 图片一半宽高
         val startX = (viewWidth - drawWidth) / 2f + translationX
         val startY = (viewHeight - drawHeight) / 2f + translationY
 
-        // 5. 设置 Model Matrix
         Matrix.setIdentityM(modelMatrix, 0)
-        // 移到位置
         Matrix.translateM(modelMatrix, 0, startX, startY, 0f)
-        // 缩放到像素大小
         Matrix.scaleM(modelMatrix, 0, drawWidth, drawHeight, 1f)
 
-        // 6. 组合矩阵: MVP = Projection * Model
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, modelMatrix, 0)
 
-        // 7. 绘制
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
 
@@ -160,14 +144,12 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
         GLES20.glDisableVertexAttribArray(texCoordHandle)
     }
 
-    /**
-     * Activity 调用此方法更新图片
-     */
-    fun updateBitmap(newBitmap: Bitmap) {
-        // 重置状态
-        scaleFactor = 1.0f
-        translationX = 0.0f
-        translationY = 0.0f
+    fun updateBitmap(newBitmap: Bitmap, resetTransform: Boolean) {
+        if (resetTransform) {
+            scaleFactor = 1.0f
+            translationX = 0.0f
+            translationY = 0.0f
+        }
         this.pendingBitmap = newBitmap
     }
 
@@ -200,6 +182,9 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
     }
 
     private fun loadTextureFromBitmap(bitmap: Bitmap) {
+        if (bitmap.isRecycled) {
+            return
+        }
         try {
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)

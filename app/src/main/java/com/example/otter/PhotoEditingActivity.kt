@@ -1,6 +1,7 @@
 package com.example.otter
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.ImageDecoder
@@ -125,7 +126,7 @@ class PhotoEditingActivity : AppCompatActivity() {
                 bitmap.recycle()
 
                 withContext(Dispatchers.Main) {
-                    renderer.updateBitmap(currentBitmap!!)
+                    renderer.updateBitmap(currentBitmap!!, true)
                     binding.glSurfaceView.requestRender()
                 }
             } catch (e: Exception) {
@@ -145,7 +146,10 @@ class PhotoEditingActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
-        binding.ivClose.setOnClickListener { finish() }
+        binding.ivClose.setOnClickListener {
+            setResult(RESULT_CANCELED)
+            finish()
+        }
         binding.tvSave.setOnClickListener { saveAndFinish() }
         binding.btnConfirmCrop.setOnClickListener { performCrop() }
         binding.btnConfirmBrush.setOnClickListener { performBrushMerge() }
@@ -153,7 +157,7 @@ class PhotoEditingActivity : AppCompatActivity() {
         binding.ivRedo.setOnClickListener {
             if (undoStack.isNotEmpty()) {
                 currentBitmap = undoStack.pop()
-                renderer.updateBitmap(currentBitmap!!)
+                renderer.updateBitmap(currentBitmap!!, false)
                 binding.glSurfaceView.requestRender()
             }
         }
@@ -163,10 +167,7 @@ class PhotoEditingActivity : AppCompatActivity() {
                 val newBitmap = it.copy(it.config ?: Bitmap.Config.ARGB_8888, true)
                 currentBitmap = newBitmap
                 recycleUndoStack()
-                renderer.updateBitmap(currentBitmap!!)
-                renderer.scaleFactor = 1f
-                renderer.translationX = 0f
-                renderer.translationY = 0f
+                renderer.updateBitmap(currentBitmap!!, true)
                 binding.glSurfaceView.requestRender()
             }
         }
@@ -211,7 +212,7 @@ class PhotoEditingActivity : AppCompatActivity() {
             }
             canvas.drawPath(transformedPath, paint)
 
-            renderer.updateBitmap(bitmap)
+            renderer.updateBitmap(bitmap, false)
             binding.glSurfaceView.requestRender()
         }
 
@@ -252,7 +253,7 @@ class PhotoEditingActivity : AppCompatActivity() {
             if (cropW > 0 && cropH > 0) {
                 val croppedBitmap = Bitmap.createBitmap(bitmap, cropX, cropY, cropW, cropH)
                 currentBitmap = croppedBitmap
-                renderer.updateBitmap(croppedBitmap)
+                renderer.updateBitmap(croppedBitmap, true)
                 binding.glSurfaceView.requestRender()
                 clampTranslation()
                 toggleCropMode(false)
