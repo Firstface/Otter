@@ -28,8 +28,11 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
         "precision mediump float;" +
                 "uniform sampler2D sTexture;" +
                 "varying vec2 vTexCoord;" +
+                "uniform float uBrightness;" +
                 "void main() {" +
-                "  gl_FragColor = texture2D(sTexture, vTexCoord);" +
+                "  vec4 color = texture2D(sTexture, vTexCoord);" +
+                "  color.rgb += uBrightness;" +
+                "  gl_FragColor = color;" +
                 "}"
 
     private lateinit var vertexBuffer: FloatBuffer
@@ -49,6 +52,7 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
     private var texCoordHandle: Int = 0
     private var textureUniformHandle: Int = 0
     private var mvpMatrixHandle: Int = 0
+    private var brightnessHandle: Int = 0
 
     private val mvpMatrix = FloatArray(16)
     private val projectionMatrix = FloatArray(16)
@@ -57,6 +61,7 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
     @Volatile var scaleFactor = 1.0f
     @Volatile var translationX = 0.0f
     @Volatile var translationY = 0.0f
+    @Volatile var brightness = 0.0f
 
     private val squareCoords = floatArrayOf(
         0.0f, 0.0f,   // Top left
@@ -82,6 +87,7 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
         texCoordHandle = GLES20.glGetAttribLocation(program, "aTexCoord")
         textureUniformHandle = GLES20.glGetUniformLocation(program, "sTexture")
         mvpMatrixHandle = GLES20.glGetUniformLocation(program, "uMVPMatrix")
+        brightnessHandle = GLES20.glGetUniformLocation(program, "uBrightness")
 
         surfaceJustCreated = true
     }
@@ -129,6 +135,7 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
 
         GLES20.glUseProgram(program)
         GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+        GLES20.glUniform1f(brightnessHandle, brightness)
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId)
@@ -149,6 +156,7 @@ class PhotoRenderer(private val context: Context) : GLSurfaceView.Renderer {
             scaleFactor = 1.0f
             translationX = 0.0f
             translationY = 0.0f
+            brightness = 0.0f
         }
         this.pendingBitmap = newBitmap
     }

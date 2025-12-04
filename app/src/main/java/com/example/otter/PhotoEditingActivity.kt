@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.graphics.Paint
@@ -16,6 +18,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -266,10 +269,12 @@ class PhotoEditingActivity : AppCompatActivity() {
     }
 
     private fun saveAndFinish() {
-        val bitmap = currentBitmap ?: return
+        val bitmapToSave = currentBitmap ?: return
         Toast.makeText(this, "正在保存...", Toast.LENGTH_SHORT).show()
 
         lifecycleScope.launch(Dispatchers.IO) {
+            val finalBitmap = applyBrightness(bitmapToSave, renderer.brightness)
+
             try {
                 val filename = "Otter_${System.currentTimeMillis()}.jpg"
                 val contentValues = android.content.ContentValues().apply {
@@ -284,7 +289,7 @@ class PhotoEditingActivity : AppCompatActivity() {
                 val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
                 uri?.let {
                     resolver.openOutputStream(it)?.use { stream ->
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                        finalBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         contentValues.clear()
@@ -302,8 +307,29 @@ class PhotoEditingActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@PhotoEditingActivity, "保存失败: ${e.message}", Toast.LENGTH_LONG).show()
                 }
+            } finally {
+                if (finalBitmap != bitmapToSave) {
+                    finalBitmap.recycle()
+                }
             }
         }
+    }
+
+    private fun applyBrightness(bitmap: Bitmap, brightness: Float): Bitmap {
+        if (brightness == 0f) return bitmap
+        val adjustedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(adjustedBitmap)
+        val paint = Paint()
+        val brightnessValue = brightness * 255
+        val colorMatrix = ColorMatrix(floatArrayOf(
+            1f, 0f, 0f, 0f, brightnessValue,
+            0f, 1f, 0f, 0f, brightnessValue,
+            0f, 0f, 1f, 0f, brightnessValue,
+            0f, 0f, 0f, 1f, 0f
+        ))
+        paint.colorFilter = ColorMatrixColorFilter(colorMatrix)
+        canvas.drawBitmap(bitmap, 0f, 0f, paint)
+        return adjustedBitmap
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -395,6 +421,25 @@ class PhotoEditingActivity : AppCompatActivity() {
             }
         }
         binding.rvEditingTools.adapter = toolAdapter
+
+        binding.sbParameter.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    val brightnessValue = (progress - 50) / 100f
+                    renderer.brightness = brightnessValue
+                    binding.glSurfaceView.requestRender()
+                    binding.tvParamName.text = "亮度 ${if (brightnessValue > 0) "+" else ""}${(brightnessValue * 100).toInt()}"
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // Initial state
+        binding.sbParameter.progress = 50
+        binding.tvParamName.text = "亮度 0"
     }
 
     private fun toggleBrushMode(enable: Boolean) {
