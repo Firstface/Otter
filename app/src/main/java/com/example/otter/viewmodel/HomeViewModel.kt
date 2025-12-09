@@ -32,7 +32,7 @@ class HomeViewModel : ViewModel() {
     val recommendationList = _recommendationList.asStateFlow()
 
     // SharedFlow，用于处理一次性的导航事件
-    private val _navigationEvent = MutableSharedFlow<HomeNavigationEvent>()
+    private val _navigationEvent = MutableSharedFlow<HomeNavigationEvent?>(replay = 1)
     val navigationEvent = _navigationEvent.asSharedFlow()
 
     init {
@@ -43,6 +43,11 @@ class HomeViewModel : ViewModel() {
     private fun loadData() {
         _toolList.value = ToolType.entries.map { ToolItem(it) }
         _recommendationList.value = RecommendationType.entries.map { RecommendationItem(it) }
+    }
+
+    /** 当事件被UI处理完毕后调用，以清除缓存的事件 */
+    fun onEventHandled() {
+        _navigationEvent.tryEmit(null)
     }
 
     // --- 事件处理方法 ---

@@ -91,9 +91,12 @@ class HomeFragment : Fragment() {
                 // 监听一次性的导航事件
                 launch {
                     viewModel.navigationEvent.collect { event ->
-                        when (event) {
-                            is HomeNavigationEvent.ToPhotoSelection -> openPhotoSelection(event.functionName)
-                            is HomeNavigationEvent.ToCamera -> openCamera()
+                        event?.let {
+                            when (it) {
+                                is HomeNavigationEvent.ToPhotoSelection -> openPhotoSelection(it.functionName)
+                                is HomeNavigationEvent.ToCamera -> openCamera()
+                            }
+                            viewModel.onEventHandled() // 事件处理完毕，通知ViewModel
                         }
                     }
                 }
