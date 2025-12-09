@@ -99,12 +99,6 @@ com.example.otter
 - 首版 UI  
 - 品牌视觉体系  
 
-## 🚀 待办事项 (Todo)
-- [ ] LUT 滤镜  
-- [ ] OpenGL 内存优化  
-- [ ] Activity 动画  
-- [ ] 文字贴纸  
-
 ## 🛠 快速开始 (Getting Started)
 ### 构建
 ```
@@ -114,4 +108,4 @@ cd Otter
 ```
 
 ## 📎 作者
-Created by **Your Name** for Hypic Android Training Camp.
+Created by V_E for Hypic Android Training Camp.
