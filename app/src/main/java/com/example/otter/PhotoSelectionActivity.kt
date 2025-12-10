@@ -54,6 +54,9 @@ class PhotoSelectionActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
+
+            viewModel.clearSelection()
+
             // 如果编辑页保存了新图片，返回时需要刷新列表以显示新图片
             if (MediaLoader.hasPermission(this)) {
                 viewModel.loadMedia()

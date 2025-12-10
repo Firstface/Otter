@@ -104,6 +104,30 @@ class PhotoSelectionViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+
+    /**
+     * 检查当前模式，如果是批量模式，则清空已选状态。
+     * 应在从编辑页返回时调用。
+     */
+    fun clearSelection() {
+        // 1. 【新增判断】只有在批量编辑模式下，才需要执行清空逻辑
+        // 单图编辑模式下，_selectedPhotos 本身就是空的，不需要处理，避免不必要的 UI 刷新
+        if (_isBatchEditMode.value) {
+
+            // 2. 清空底部已选列表
+            _selectedPhotos.value = emptyList()
+
+            // 3. 遍历主列表，取消所有勾选视觉状态
+            if (_photos.value.isNotEmpty()) {
+                val resetPhotos = _photos.value.map { photo ->
+                    // 只处理那些原本被选中的，性能略微优化
+                    if (photo.isSelected) photo.copy(isSelected = false) else photo
+                }
+                _photos.value = resetPhotos
+            }
+        }
+    }
+
     /**
      * 处理照片点击事件，更新选中状态和导航事件。
      * 应在用户点击照片项时调用。
