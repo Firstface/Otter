@@ -194,7 +194,7 @@ class PhotoSelectionActivity : AppCompatActivity() {
                 launch {
                     viewModel.selectedPhotos.collect { photos ->
                         selectedPhotoAdapter.submitList(photos)
-                        binding.tvSelectedCount.text = "已选择 ${photos.size}/9"
+                        binding.tvSelectedCount.text =  "已选择 ${photos.size}/9"
                     }
                 }
 

@@ -171,6 +171,11 @@ class PhotoEditingActivity : AppCompatActivity() {
                 currentBitmap = newBitmap
                 recycleUndoStack()
                 renderer.updateBitmap(currentBitmap!!, true)
+
+                renderer.brightness = 0f           // 重置渲染器的亮度值
+                binding.sbParameter.progress = 50  // 重置滑动条位置 (50代表0)
+                binding.tvParamName.text = "亮度 0" // 重置显示的文本
+
                 binding.glSurfaceView.requestRender()
             }
         }
